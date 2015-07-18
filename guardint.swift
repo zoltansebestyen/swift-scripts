@@ -1,14 +1,19 @@
 #!/usr/bin/env swift
-var num: Int? = nil
+
+import Darwin
+
 func square(x: Int) -> Int {
     return x * x
 
 }
-if num != nil {
+
+func testNum(num: Int?) -> Void {
+    guard num != nil else {
+        print("num is nil")         // prints "num is nil"
+        exit(0)
+    }
     print(square(num!))
-
-} else {
-    print("num is nil")         // prints "num is nil"
-
 }
 
+testNum(10);
+testNum(nil);
