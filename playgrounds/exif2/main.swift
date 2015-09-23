@@ -25,15 +25,22 @@ import CoreFoundation
 import ImageIO
 
 // Taken from http://stackoverflow.com/questions/24089999/how-do-you-create-a-swift-date-object
+
+let dateStringFormatter = NSDateFormatter()
+dateStringFormatter.dateFormat = "yyyy-MM-dd"
+dateStringFormatter.locale = NSLocale(localeIdentifier: "en_US_POSIX")
+
+// took it out for performance.
+let dateTimeStringFormatter = NSDateFormatter()
+dateTimeStringFormatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
+dateTimeStringFormatter.locale = NSLocale(localeIdentifier: "en_US_POSIX")
+
 extension NSDate
 {
     convenience
     init(dateString:String) {
         // let dateString = "2015:03:11 19:22:14";
-        let dateStringFormatter = NSDateFormatter()
-        dateStringFormatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
-        dateStringFormatter.locale = NSLocale(localeIdentifier: "en_US_POSIX")
-        let d = dateStringFormatter.dateFromString(dateString)
+        let d = dateTimeStringFormatter.dateFromString(dateString)
         self.init(timeInterval:0, sinceDate:d!)
     }
 }
@@ -44,15 +51,15 @@ guard let cwdEnum = fm.enumeratorAtPath( fm.currentDirectoryPath) else {
     exit (-1)
 }
 
-//func printDate(date: String) {
-//    print(NSDate(dateString: date))
-//}
+func printDate(date: String) {
+    print(NSDate(dateString: date))
+}
 
 // TODO https://github.com/nori0620/SwiftFilePath could help
 // or https://github.com/kylef/PathKit/blob/master/PathKit/PathKit.swift
 while let element:String = cwdEnum.nextObject() as? String {
     if (element.lowercaseString.hasSuffix("jpg")) {
-        let path = fm.currentDirectoryPath + " " + element
+        let path = fm.currentDirectoryPath + "/" + element
         let url = NSURL(fileURLWithPath: path)
         
         guard let imageSource = CGImageSourceCreateWithURL(url, nil) else {
@@ -60,57 +67,44 @@ while let element:String = cwdEnum.nextObject() as? String {
             continue
 //            exit(-1)
         }
-        
         let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil)! as Dictionary
-        
-        guard let dateStr:String = imageProperties["{TIFF}"]!["DateTime"] ??
-                            imageProperties["{Exif}"]!["DateTimeDigitized"] ??
-            imageProperties["{Exif}"]!["DateTimeOriginal"] else {
-                print("Can't get date for file \(path), skipping it.")
-                continue
+
+        guard let dateStr:String = (imageProperties["{TIFF}"]?["DateTime"] as? String) ??
+            (imageProperties["{Exif}"]?["DateTimeDigitized"] as? String) ??
+            (imageProperties["{Exif}"]?["DateTimeOriginal"] as? String) else {
+                print("Can't get date for file \(path)")
+            continue
         }
-        
-        
-        
+
 //        let dates = imageProperties["{GPS}"]!["DateStamp"] as! String
 //        let times = imageProperties["{GPS}"]!["TimeStamp"] as! String
 //        printDate("\(dates) \(times)")
 
         let date = NSDate(dateString: dateStr)
+        let dirname = dateStringFormatter.stringFromDate(date)
+        var dir:ObjCBool = true
+
+        // Exists?
+        if(!fm.fileExistsAtPath(dirname, isDirectory: &dir)) {
+            do {
+                try fm.createDirectoryAtPath(dirname, withIntermediateDirectories: false, attributes: nil)
+            } catch let error as NSError {
+                print("Could not create directory \(dirname)")
+                print("Error: \(error.localizedDescription)")
+            }
+        }
+
+        if (!dir) {
+            print("There's already a file called \(dirname), cannot create directory")
+            continue
+        }
+
+        do {
+            try fm.moveItemAtPath(element, toPath: dirname + "/" + element)
+        } catch let error as NSError {
+            print("Could not move \(element) to directory \(dirname)")
+            print("Error: \(error.localizedDescription)")
+        }
 
     }
 }
-
-
-let path:String = "/Users/szoli/Desktop/kepek/to_be_archived/agicapture/2015-03-11 Kardok/IMG_2863.JPG"
-print("path: \(path)")
-let url = NSURL(fileURLWithPath: path)
-print ("url: \(url)")
-
-if (!fm.fileExistsAtPath(path))
-{
-    print("FILE \(path) NOT AVAILABLE");
-    exit(0)
-}
-
-guard let imageSource = CGImageSourceCreateWithURL(url, nil) else {
-    print("Can't create image source")
-    exit(-1)
-}
-
-let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil)! as Dictionary
-//let tiffData = imageProperties["{TIFF}"] as! Dictionary<String, AnyObject>
-//let date = NSDate(dateString: tiffData["DateTime"] as! String)
-func printDate(date: String) {
-    print(NSDate(dateString: date))
-}
-
-printDate(imageProperties["{TIFF}"]!["DateTime"] as! String)
-printDate(imageProperties["{Exif}"]!["DateTimeDigitized"] as! String)
-printDate(imageProperties["{Exif}"]!["DateTimeOriginal"] as! String)
-let dates = imageProperties["{GPS}"]!["DateStamp"] as! String
-let times = imageProperties["{GPS}"]!["TimeStamp"] as! String
-printDate("\(dates) \(times)")
-
-
-//print(imageProperties)

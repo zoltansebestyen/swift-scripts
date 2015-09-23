@@ -9,7 +9,7 @@ import ImageIO
 // let url = NSURL(string: "file:////Users/szoli/Work/Swift/scripts/IMG_2863.JPG")
 
 //let path:String = "/Users/szoli/Work/Swift/scripts/IMG_2863.JPG"
-let path:String = "/Users/szoli/Work/Swift/SL/exif.playground/Resources/IMG_2863.JPG"
+let path:String = "/Users/szoli/Work/Swift/scripts/playgrounds/exif.playground/Resources/IMG_2863.JPG"
 let url = NSURL(fileURLWithPath: path)
 
 
@@ -28,3 +28,16 @@ guard let imageSource = CGImageSourceCreateWithURL(url, nil) else {
 let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil)! as Dictionary
 
 print(imageProperties)
+
+//var dateStr:String? = (imageProperties["{TIFF}"]?["DateTime"] as? String)
+//dateStr = (imageProperties["{Exif}"]?["DateTimeDigitized"] as? String)
+//dateStr = (imageProperties["{Exif}"]?["DateTimeOriginal"] as? String)
+
+guard let dateStr:String = (imageProperties["{TIFF}"]?["DateTime"] as? String) ??
+    (imageProperties["{Exif}"]?["DateTimeDigitized"] as? String) ??
+    (imageProperties["{Exif}"]?["DateTimeOriginal"] as? String) else {
+        print("Not")
+        exit(0)
+}
+
+print(dateStr)
